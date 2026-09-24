@@ -21,6 +21,9 @@
   <div class="loader__mark">M</div>
 </div>
 
+<!-- Decorative fixed corner frame -->
+<div class="frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
 <!-- Side dot navigation -->
 <nav class="dotnav" aria-label="Navegación de secciones">
   <ul class="dotnav__list">
@@ -39,7 +42,17 @@
 
 <!-- Floating music toggle -->
 <button class="musicfab" id="musicFab" type="button" aria-label="Reproducir música">
-  <span class="musicfab__bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+  <span class="musicfab__idle" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="20" height="20">
+      <path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+    </svg>
+  </span>
+  <span class="musicfab__playing" aria-hidden="true">
+    <svg class="musicfab__note" viewBox="0 0 24 24" width="16" height="16">
+      <path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+    </svg>
+    <span class="musicfab__wave"><i></i><i></i><i></i></span>
+  </span>
 </button>
 
 <main class="scroller" id="scroller">
@@ -47,6 +60,7 @@
   <!-- 1. HERO -->
   <section class="panel hero" id="hero" data-panel>
     <div class="panel__bg panel__bg--hero" aria-hidden="true"></div>
+    <div class="sparkles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <div class="panel__content">
       <p class="eyebrow reveal">Mis XV Años</p>
       <h1 class="hero__name reveal">Mayte</h1>
@@ -150,7 +164,9 @@
         <span class="playbtn__icon" id="playIcon">
           <svg viewBox="0 0 24 24" width="26" height="26"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
         </span>
-        <span class="playbtn__eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+        <svg class="playbtn__note" viewBox="0 0 24 24" width="34" height="34" aria-hidden="true">
+          <path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55C7.79 13 6 14.79 6 17s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+        </svg>
       </button>
       <p class="song__caption reveal" id="songCaption">Presiona para escuchar</p>
       <audio id="bgAudio" src="assets/audio/cancion-favorita.mp3" preload="none" loop></audio>
@@ -209,6 +225,7 @@
 
   <!-- 10. CIERRE -->
   <section class="panel cierre" id="cierre" data-panel>
+    <div class="sparkles" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <div class="panel__content">
       <div class="sprig reveal" aria-hidden="true">
         <svg viewBox="0 0 120 40" fill="none" xmlns="http://www.w3.org/2000/svg">
