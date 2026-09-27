@@ -3,6 +3,10 @@
    Paleta: rosados, oro rosa & champaña
    ============================================================ */
 
+/* Evita que el "modo oscuro forzado" de algunos navegadores Android
+   (HONOR, Huawei, Samsung) invierta los colores de la invitación */
+:root { color-scheme: light only; }
+
 :root {
   --blush: #f3d9df;
   --pink: #c98fa0;
@@ -79,8 +83,10 @@ img, svg { display: block; max-width: 100%; }
 
 .panel {
   position: relative;
-  height: 100svh;
-  height: 100svh;
+  /* min-height (no height fijo): si el contenido no cabe —pantallas bajas o
+     letra del sistema agrandada— el panel crece en lugar de recortarlo */
+  min-height: 100vh;
+  min-height: 100svh;
   width: 100%;
   scroll-snap-align: start;
   scroll-snap-stop: always;
@@ -90,6 +96,7 @@ img, svg { display: block; max-width: 100%; }
   text-align: center;
   padding: calc(var(--gutter) * 1.6) var(--gutter);
   overflow: hidden;
+  overflow: clip;
   background:
     radial-gradient(circle at 15% 20%, rgba(183,110,121,0.14), transparent 45%),
     radial-gradient(circle at 85% 80%, rgba(233,201,165,0.35), transparent 50%),
@@ -180,6 +187,22 @@ img, svg { display: block; max-width: 100%; }
   background: linear-gradient(90deg, transparent, var(--rose-gold));
 }
 .eyebrow::after { background: linear-gradient(90deg, var(--rose-gold), transparent); }
+.eyebrow::before,
+.eyebrow::after { flex-shrink: 0; }
+
+/* ---------- Celulares ---------- */
+@media (max-width: 480px) {
+  /* Deja libre la esquina inferior para el botón flotante de música */
+  .panel { padding-bottom: 88px; }
+  .eyebrow {
+    letter-spacing: 0.2em;
+    font-size: 0.68rem;
+    text-wrap: balance;
+  }
+  /* Los títulos largos ocupan dos líneas: sin los trazos laterales se ven centrados */
+  .eyebrow--long::before,
+  .eyebrow--long::after { display: none; }
+}
 
 .script {
   font-family: var(--font-script);
