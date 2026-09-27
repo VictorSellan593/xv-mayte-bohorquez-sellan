@@ -13,7 +13,10 @@ const CONFIG = {
   eventDateISO: "2026-10-09T19:00:00-05:00",
   // Número de WhatsApp de los papás para recibir las confirmaciones.
   // Formato: código de país + número, SIN "+", sin espacios ni guiones. Ej: "593987654321"
-  whatsappNumber: "593000000000",
+  whatsappNumber: "593962735327",
+  // Datos de la canción que se muestran en el reproductor
+  songTitle: "Mi canción favorita",
+  songArtist: "Mayte · XV Años",
 };
 
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -156,7 +159,7 @@ if (scroller && "IntersectionObserver" in window) {
 // Feedback táctil en botones (Motion press animation)
 // ------------------------------------------------------------
 if (!prefersReducedMotion) {
-  const pressableEls = document.querySelectorAll(".btn, .playbtn, .musicfab, .dotnav__dot");
+  const pressableEls = document.querySelectorAll(".btn, .player__play, .musicfab, .dotnav__dot");
   pressableEls.forEach((el) => {
     const down = () => animate(el, { scale: 0.94 }, { duration: 0.12, easing: "ease-out" });
     const up = () => animate(el, { scale: 1 }, { duration: 0.25, easing: "ease-out" });
@@ -231,7 +234,8 @@ if (addCalendarBtn) {
       "DTEND;TZID=America/Guayaquil:20261009T230000",
       "SUMMARY:XV Anos de Mayte Bohorquez Sellan",
       "DESCRIPTION:¡Celebra conmigo mis quince anos!",
-      "LOCATION:Salon [Nombre del Lugar]\\, Quito\\, Ecuador",
+      "LOCATION:Salon Princess\\, Av. Guillermo Pareja Rolando\\, La Garzota\\, Guayaquil\\, Ecuador",
+      "GEO:-2.1502111;-79.8926848",
       "END:VEVENT",
       "END:VCALENDAR",
     ].join("\r\n");
@@ -249,42 +253,138 @@ if (addCalendarBtn) {
 }
 
 // ------------------------------------------------------------
-// Reproductor de música favorita
+// Reproductor de música favorita (estilo Spotify) + autoplay
 // ------------------------------------------------------------
 const audio = document.getElementById("bgAudio");
 const playBtn = document.getElementById("playBtn");
 const musicFab = document.getElementById("musicFab");
 const songCaption = document.getElementById("songCaption");
+const seekBar = document.getElementById("seekBar");
+const timeCurrent = document.getElementById("timeCurrent");
+const timeTotal = document.getElementById("timeTotal");
+const backBtn = document.getElementById("backBtn");
+const fwdBtn = document.getElementById("fwdBtn");
+const repeatBtn = document.getElementById("repeatBtn");
+const muteBtn = document.getElementById("muteBtn");
+const likeBtn = document.getElementById("likeBtn");
+
+const songTitleEl = document.getElementById("songTitle");
+const songArtistEl = document.getElementById("songArtist");
+if (songTitleEl && CONFIG.songTitle) songTitleEl.textContent = CONFIG.songTitle;
+if (songArtistEl && CONFIG.songArtist) songArtistEl.textContent = CONFIG.songArtist;
+
+const MISSING_AUDIO_MSG = "Agrega el archivo MP3 en assets/audio/";
+let isSeeking = false;
+
+function formatTime(sec) {
+  if (!Number.isFinite(sec) || sec < 0) return "0:00";
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
 
 function setPlayingState(isPlaying) {
-  if (playBtn) playBtn.classList.toggle("is-playing", isPlaying);
-  if (musicFab) musicFab.classList.toggle("is-playing", isPlaying);
+  playBtn?.classList.toggle("is-playing", isPlaying);
+  playBtn?.setAttribute("aria-label", isPlaying ? "Pausar canción" : "Reproducir canción");
+  musicFab?.classList.toggle("is-playing", isPlaying);
   musicFab?.setAttribute("aria-label", isPlaying ? "Pausar música" : "Reproducir música");
-  if (songCaption) songCaption.textContent = isPlaying ? "Reproduciendo…" : "Presiona para escuchar";
+  if (songCaption) songCaption.textContent = isPlaying ? "Reproduciendo…" : "Presiona play para escuchar";
+}
+
+function updateProgress() {
+  if (!audio || !seekBar) return;
+  const duration = audio.duration || 0;
+  const pct = duration ? (audio.currentTime / duration) * 100 : 0;
+  if (!isSeeking) seekBar.value = pct;
+  seekBar.style.setProperty("--pct", `${isSeeking ? seekBar.value : pct}%`);
+  if (timeCurrent) timeCurrent.textContent = formatTime(audio.currentTime);
+  if (timeTotal) timeTotal.textContent = formatTime(duration);
+}
+
+function playAudio() {
+  if (!audio) return Promise.resolve();
+  return audio.play().catch((err) => {
+    if (err?.name !== "NotAllowedError" && songCaption) songCaption.textContent = MISSING_AUDIO_MSG;
+    throw err;
+  });
 }
 
 function togglePlay() {
   if (!audio) return;
-  if (audio.paused) {
-    audio
-      .play()
-      .then(() => setPlayingState(true))
-      .catch(() => {
-        if (songCaption) songCaption.textContent = "Agrega el archivo MP3 en assets/audio/";
-      });
-  } else {
-    audio.pause();
-    setPlayingState(false);
-  }
+  if (audio.paused) playAudio().catch(() => {});
+  else audio.pause();
 }
 
 playBtn?.addEventListener("click", togglePlay);
 musicFab?.addEventListener("click", togglePlay);
 audio?.addEventListener("pause", () => setPlayingState(false));
 audio?.addEventListener("play", () => setPlayingState(true));
+audio?.addEventListener("timeupdate", updateProgress);
+audio?.addEventListener("loadedmetadata", updateProgress);
 audio?.addEventListener("error", () => {
-  if (songCaption) songCaption.textContent = "Agrega el archivo MP3 en assets/audio/";
+  if (songCaption) songCaption.textContent = MISSING_AUDIO_MSG;
 });
+
+seekBar?.addEventListener("input", () => {
+  isSeeking = true;
+  seekBar.style.setProperty("--pct", `${seekBar.value}%`);
+  if (timeCurrent && audio?.duration) timeCurrent.textContent = formatTime((seekBar.value / 100) * audio.duration);
+});
+seekBar?.addEventListener("change", () => {
+  if (audio?.duration) audio.currentTime = (seekBar.value / 100) * audio.duration;
+  isSeeking = false;
+  updateProgress();
+});
+
+backBtn?.addEventListener("click", () => {
+  if (audio) audio.currentTime = Math.max(0, audio.currentTime - 10);
+});
+fwdBtn?.addEventListener("click", () => {
+  if (audio?.duration) audio.currentTime = Math.min(audio.duration - 0.1, audio.currentTime + 10);
+});
+
+repeatBtn?.addEventListener("click", () => {
+  if (!audio) return;
+  audio.loop = !audio.loop;
+  repeatBtn.classList.toggle("is-on", audio.loop);
+  repeatBtn.setAttribute("aria-pressed", String(audio.loop));
+});
+
+muteBtn?.addEventListener("click", () => {
+  if (!audio) return;
+  audio.muted = !audio.muted;
+  muteBtn.classList.toggle("is-muted", audio.muted);
+  muteBtn.setAttribute("aria-label", audio.muted ? "Activar sonido" : "Silenciar");
+});
+
+likeBtn?.addEventListener("click", () => {
+  const liked = !likeBtn.classList.contains("is-on");
+  likeBtn.classList.toggle("is-on", liked);
+  likeBtn.setAttribute("aria-pressed", String(liked));
+  if (liked && !prefersReducedMotion) {
+    animate(likeBtn, { scale: [1, 1.3, 1] }, { duration: 0.35, easing: "ease-out" });
+  }
+});
+
+// Autoplay: se intenta reproducir al cargar la página. Los navegadores
+// bloquean el audio con sonido hasta que el invitado interactúa, así que
+// si se bloquea, la música arranca en el primer toque, clic o tecla.
+const UNLOCK_EVENTS = ["pointerdown", "touchstart", "keydown"];
+function removeUnlockListeners() {
+  UNLOCK_EVENTS.forEach((ev) => document.removeEventListener(ev, unlockAudio, true));
+}
+function unlockAudio(e) {
+  removeUnlockListeners();
+  // Si el primer toque fue sobre un control de música, ese control decide
+  if (e.target.closest?.("#playBtn, #musicFab")) return;
+  if (audio?.paused) playAudio().catch(() => {});
+}
+if (audio) {
+  playAudio().catch(() => {
+    UNLOCK_EVENTS.forEach((ev) => document.addEventListener(ev, unlockAudio, { capture: true }));
+  });
+  audio.addEventListener("play", removeUnlockListeners, { once: true });
+}
 
 // ------------------------------------------------------------
 // Formulario de confirmación de asistencia (RSVP)
@@ -309,33 +409,91 @@ function buildWhatsappLink(entry) {
   return `https://wa.me/${CONFIG.whatsappNumber}?text=${text}`;
 }
 
+const rsvpThanksTitle = document.getElementById("rsvpThanksTitle");
+const rsvpResetBtn = document.getElementById("rsvpResetBtn");
+
+// localStorage puede fallar (modo privado, datos bloqueados): nunca debe romper la página
+function storageGet(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function storageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {}
+}
+function storageRemove(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch {}
+}
+
+// Devuelve la confirmación guardada en este dispositivo, o null si no hay una válida
+function getSavedEntry() {
+  if (storageGet(SUBMIT_KEY) !== "1") return null;
+  try {
+    const entries = JSON.parse(storageGet(DATA_KEY) || "[]");
+    const last = entries[entries.length - 1];
+    return last && typeof last.fullName === "string" && last.fullName.trim() ? last : null;
+  } catch {
+    return null;
+  }
+}
+
 function showThanks(entry) {
   if (rsvpForm) rsvpForm.hidden = true;
   if (rsvpThanks) rsvpThanks.hidden = false;
 
-  if (entry && rsvpThanksText) {
+  const firstName = entry.fullName.trim().split(/\s+/)[0];
+  if (rsvpThanksTitle) rsvpThanksTitle.textContent = `¡Gracias por confirmar, ${firstName}!`;
+  if (rsvpThanksText) {
     const plural = Number(entry.guestCount) > 1 ? "personas" : "persona";
     rsvpThanksText.textContent = `Tu asistencia (${entry.guestCount} ${plural}) ha sido registrada. ¡Nos vemos en la fiesta!`;
   }
-  if (entry && whatsappBtn) {
-    whatsappBtn.href = buildWhatsappLink(entry);
-  }
+  if (rsvpResetBtn) rsvpResetBtn.textContent = `¿No eres ${firstName}? Confirmar otra asistencia`;
+  if (whatsappBtn) whatsappBtn.href = buildWhatsappLink(entry);
 
   if (rsvpThanks && !prefersReducedMotion) {
     animate(rsvpThanks, { opacity: [0, 1], y: [16, 0] }, { duration: 0.6, easing: [0.22, 1, 0.36, 1] });
   }
 }
 
-// Si este dispositivo ya confirmó, mostrar directamente el mensaje de gracias
-if (localStorage.getItem(SUBMIT_KEY) === "1") {
-  const entries = JSON.parse(localStorage.getItem(DATA_KEY) || "[]");
-  showThanks(entries[entries.length - 1] || null);
+function showForm() {
+  if (rsvpThanks) rsvpThanks.hidden = true;
+  if (rsvpForm) {
+    rsvpForm.reset();
+    rsvpForm.hidden = false;
+    rsvpForm.fullName.focus({ preventScroll: true });
+  }
 }
+
+// Si este dispositivo ya confirmó, mostrar el mensaje de gracias; si los datos
+// guardados están incompletos o dañados, se descartan y se muestra el formulario
+const savedEntry = getSavedEntry();
+if (savedEntry) {
+  showThanks(savedEntry);
+} else {
+  storageRemove(SUBMIT_KEY);
+}
+
+// Evita que un Enter en los campos de texto envíe el formulario por accidente;
+// solo se confirma con el botón "Confirmar asistencia"
+rsvpForm?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target instanceof HTMLInputElement) e.preventDefault();
+});
+
+rsvpResetBtn?.addEventListener("click", () => {
+  storageRemove(SUBMIT_KEY);
+  showForm();
+});
 
 rsvpForm?.addEventListener("submit", (e) => {
   e.preventDefault();
 
-  if (localStorage.getItem(SUBMIT_KEY) === "1") return;
+  if (getSavedEntry()) return;
 
   const fullName = rsvpForm.fullName.value.trim();
   const guestCount = Math.max(1, parseInt(rsvpForm.guestCount.value, 10) || 1);
@@ -353,10 +511,13 @@ rsvpForm?.addEventListener("submit", (e) => {
     submittedAt: new Date().toISOString(),
   };
 
-  const entries = JSON.parse(localStorage.getItem(DATA_KEY) || "[]");
+  let entries = [];
+  try {
+    entries = JSON.parse(storageGet(DATA_KEY) || "[]");
+  } catch {}
   entries.push(entry);
-  localStorage.setItem(DATA_KEY, JSON.stringify(entries));
-  localStorage.setItem(SUBMIT_KEY, "1");
+  storageSet(DATA_KEY, JSON.stringify(entries));
+  storageSet(SUBMIT_KEY, "1");
 
   showThanks(entry);
   window.open(buildWhatsappLink(entry), "_blank", "noopener");
